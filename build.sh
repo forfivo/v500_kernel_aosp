@@ -9,7 +9,7 @@ clear
 
 # Kernel Version
 BASE_KVER="mani"
-VER="_v18"
+VER="_v19"
 KVER=$BASE_KVER$VER
 
 echo -e "${green}"
@@ -35,7 +35,7 @@ cp arch/arm/boot/zImage ~/android/boot_aosp/kernel/
 echo -e "${green}"
 echo ">>> copy modules to boot/system/lib/modules<"
 echo -e "${restore}"
-find ~/android/v500_aosp -name "*.ko" -exec cp {} ~/android/boot_aosp/system/lib/modules/ \;
+find ~/android/v500_kernel_aosp -name "*.ko" -exec cp {} ~/android/boot_aosp/system/lib/modules/ \;
 
 zipfile=$KVER
 echo -e "${green}"
