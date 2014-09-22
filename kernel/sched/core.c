@@ -5601,7 +5601,7 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 	}
 	retval = -EPERM;
 	if (!check_same_owner(p) && !ns_capable(task_user_ns(p), CAP_SYS_NICE))
-		goto out_unlock;
+		goto out_free_new_mask;
 
 #ifdef CONFIG_HOTPLUG_CPU
 	if (!ns_capable(task_user_ns(p), CAP_SYS_NICE)) {
@@ -5614,7 +5614,7 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 #endif
 	retval = security_task_setscheduler(p);
 	if (retval)
-		goto out_unlock;
+		goto out_free_new_mask;
 
 
 	cpuset_cpus_allowed(p, cpus_allowed);
@@ -5632,7 +5632,7 @@ long sched_setaffinity(pid_t pid, const struct cpumask *in_mask)
 
 		if (dl_bandwidth_enabled() && !cpumask_subset(span, new_mask)) {
 			retval = -EBUSY;
-			goto out_unlock;
+			goto out_free_new_mask;
 		}
 	}
 #endif
@@ -5651,7 +5651,7 @@ again:
 			goto again;
 		}
 	}
-out_unlock:
+out_free_new_mask:
 	free_cpumask_var(new_mask);
 out_free_cpus_allowed:
 	free_cpumask_var(cpus_allowed);
