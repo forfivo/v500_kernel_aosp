@@ -11,37 +11,43 @@ clear
 BASE_KVER="mani"
 VER="_v19"
 KVER=$BASE_KVER$VER
+DEFCONF="mani_v500_defconfig"
 
+# Directories & jobs
+JOBS=`grep -c "processor" /proc/cpuinfo`
+KERNEL_DIR="$HOME/android/v500_kernel_aosp"
+ZIP_DIR="$HOME/android/boot_aosp"
+
+# start building
 echo -e "${green}"
 echo ">>> set prerequisites"
 echo -e "${restore}"
-export LOCALVERSION="~"`echo $KVER`
+export LOCALVERSION="-"`echo $KVER`
 export ARCH=arm
 export SUBARCH=arm
-export CROSS_COMPILE=/home/mani/android/a15-linaro-4.9.2/bin/arm-cortex_a15-linux-gnueabihf-
-#make mani_v500_defconfig
-#make menuconfig
+export CROSS_COMPILE="$HOME/android/a15-linaro-4.9.2/bin/arm-cortex_a15-linux-gnueabihf-"
 
 echo -e "${green}"
 echo ">>> build zImage"
 echo -e "${restore}"
-make -j3
+make $DEFCONF
+make -j$JOBS
 
 echo -e "${green}"
 echo ">>> copy zImage to boot/kernel/<"
 echo -e "${restore}"
-cp arch/arm/boot/zImage ~/android/boot_aosp/kernel/
+cp arch/arm/boot/zImage $ZIP_DIR/kernel/
 
 echo -e "${green}"
 echo ">>> copy modules to boot/system/lib/modules<"
 echo -e "${restore}"
-find ~/android/v500_kernel_aosp -name "*.ko" -exec cp {} ~/android/boot_aosp/system/lib/modules/ \;
+find $KERNEL_DIR -name "*.ko" -exec cp {} $ZIP_DIR/system/lib/modules/ \;
 
 zipfile=$KVER
 echo -e "${green}"
 echo ">>> build zipfile"
 echo -e "${restore}"
-cd ~/android/boot_aosp/
+cd $ZIP_DIR
 rm -f *.zip
 zip -9 -r $zipfile *
 rm -f /tmp/*.zip
