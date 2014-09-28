@@ -359,6 +359,14 @@ static inline void local_flush_tlb_all(void)
 	}
 }
 
+static inline void local_flush_tlb_all_non_is(void)
+{
+	dsb();
+	asm("mcr p15, 0, %0, c8, c7, 0" : : "r" (0));
+	dsb();
+	isb();
+}
+
 static inline void local_flush_tlb_mm(struct mm_struct *mm)
 {
 	const int zero = 0;
