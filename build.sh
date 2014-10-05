@@ -25,7 +25,8 @@ echo -e "${restore}"
 export LOCALVERSION="-"`echo $KVER`
 export ARCH=arm
 export SUBARCH=arm
-export CROSS_COMPILE="$HOME/android/a15-linaro-4.9.2/bin/arm-cortex_a15-linux-gnueabihf-"
+#export CROSS_COMPILE="$HOME/android/a15-linaro-4.9.2/bin/arm-cortex_a15-linux-gnueabihf-"
+export CROSS_COMPILE="$HOME/android/arm-linux-4.8/bin/arm-eabi-"
 
 echo -e "${green}"
 echo ">>> build zImage"
