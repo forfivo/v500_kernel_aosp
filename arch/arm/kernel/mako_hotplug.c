@@ -40,11 +40,10 @@
 
 #define MIN_CPU_UP_US (1000 * USEC_PER_MSEC)
 #define NUM_POSSIBLE_CPUS num_possible_cpus()
-#define HIGH_LOAD (90 * 2)
+#define HIGH_LOAD (90 << 1)
 #define MAX_FREQ_CAP 702000
 
 struct cpu_stats {
-	unsigned int online_cpus;
 	unsigned int counter;
 	u64 timestamp;
 	uint32_t freq;
@@ -150,7 +149,6 @@ static void cpu_revive(unsigned int load)
 online_all:
 	cpus_online_work();
 	stats.timestamp = ktime_to_us(ktime_get());
-	stats.online_cpus = num_online_cpus();
 }
 
 static void cpu_smash(void)
@@ -182,8 +180,6 @@ static void cpu_smash(void)
 
 	cpus_offline_work();
 
-	stats.online_cpus = num_online_cpus();
-
 	/*
 	 * reset the counter yo
 	 */
@@ -195,25 +191,26 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 	struct hotplug_tunables *t = &tunables;
 	unsigned long cur_load = 0;
 	unsigned int cpu;
+	unsigned int online_cpus = num_online_cpus();
 
 	/*
 	 * reschedule early when the system has woken up from the FREEZER
 	 * but the display is not on
 	 */
-	if (unlikely(stats.online_cpus == 1))
+	if (unlikely(online_cpus == 1))
 		goto reschedule;
 
 	/*
 	 * reschedule early when the user doesn't want more than 2 cores online
 	 */
-	if (unlikely(t->load_threshold == 100 && stats.online_cpus == 2))
+	if (unlikely(t->load_threshold == 100 && online_cpus == 2))
 		goto reschedule;
 
 	/*
 	 * reschedule early when users desire to run with all cores online
 	 */
 	if (unlikely(!t->load_threshold && 
-			stats.online_cpus == NUM_POSSIBLE_CPUS)) {
+			online_cpus == NUM_POSSIBLE_CPUS)) {
 		goto reschedule;
 	}
 
@@ -224,13 +221,13 @@ static void __ref decide_hotplug_func(struct work_struct *work)
 		if (stats.counter < t->max_load_counter)
 			++stats.counter;
 
-		if (stats.online_cpus <= 2)
+		if (online_cpus <= 2)
 			cpu_revive(cur_load);
 	} else {
 		if (stats.counter)
 			--stats.counter;
 
-		if (stats.online_cpus > 2)
+		if (online_cpus > 2)
 			cpu_smash();
 	}
 
@@ -286,8 +283,6 @@ static void mako_hotplug_suspend(struct work_struct *work)
 		cpu_down(cpu);
 	}
 
-	stats.online_cpus = num_online_cpus();
-
 	screen_off_cap(true);
 
 	pr_info("%s: suspend\n", MAKO_HOTPLUG);
@@ -305,8 +300,6 @@ static void __ref mako_hotplug_resume(struct work_struct *work)
 
 		cpu_up(cpu);
 	}
-
-	stats.online_cpus = num_online_cpus();
 
 	pr_info("%s: resume\n", MAKO_HOTPLUG);
 }
@@ -524,8 +517,6 @@ static int __devinit mako_hotplug_probe(struct platform_device *pdev)
 	t->cpufreq_unplug_limit = DEFAULT_CPUFREQ_UNPLUG_LIMIT;
 	t->min_time_cpu_online = DEFAULT_MIN_TIME_CPU_ONLINE;
 	t->timer = DEFAULT_TIMER;
-
-	stats.online_cpus = num_online_cpus();
 
 	ret = misc_register(&mako_hotplug_control_device);
 
