@@ -149,14 +149,14 @@ static struct dbs_tuners {
 	.sampling_down_factor = DEF_SAMPLING_DOWN_FACTOR,
 	.down_differential = DEF_FREQUENCY_DOWN_DIFFERENTIAL,
 	.down_differential_multi_core = MICRO_FREQUENCY_DOWN_DIFFERENTIAL,
-	.up_threshold_any_cpu_load = 83,
+	.up_threshold_any_cpu_load = 87,
 	.ignore_nice = 0,
 	.powersave_bias = 0,
 	.sync_freq = 702000,
 	.optimal_freq = 918000,
 	.io_is_busy = 1,
 	.input_boost_freq = 1134000,
-	.boostpulse_duration = 300000,
+	.boostpulse_duration = 200000,
 };
 
 /*
