@@ -15,7 +15,7 @@
 	echo "87" > /sys/devices/virtual/misc/mako_hotplug/load_threshold
 	echo "17" > /sys/devices/virtual/misc/mako_hotplug/high_load_counter
 	echo "12" > /sys/devices/virtual/misc/mako_hotplug/max_load_counter
-	echo "1242000" > /sys/devices/virtual/misc/mako_hotplug/cpufreq_unplug_limit
+	echo "1350000" > /sys/devices/virtual/misc/mako_hotplug/cpufreq_unplug_limit
 	echo "1" > /sys/devices/virtual/misc/mako_hotplug/min_time_cpu_online
 	echo "2" > /sys/devices/virtual/misc/mako_hotplug/timer
 
