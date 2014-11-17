@@ -311,7 +311,6 @@ struct kgsl_device {
 };
 
 void kgsl_process_events(struct work_struct *work);
-void kgsl_check_fences(struct work_struct *work);
 
 #define KGSL_DEVICE_COMMON_INIT(_dev) \
 	.hwaccess_gate = COMPLETION_INITIALIZER((_dev).hwaccess_gate),\
@@ -359,6 +358,7 @@ struct kgsl_process_private;
  * @pagefault: flag set if this context caused a pagefault.
  * @pagefault_ts: global timestamp of the pagefault, if KGSL_CONTEXT_PAGEFAULT
  * is set.
+ * @flags: flags from userspace controlling the behavior of this context
  * @fault_count: number of times gpu hanged in last _context_throttle_time ms
  * @fault_time: time of the first gpu hang in last _context_throttle_time ms
  * @pwr_constraint: power constraint from userspace for this context
@@ -377,6 +377,7 @@ struct kgsl_context {
 	struct list_head events;
 	struct list_head events_list;
 	unsigned int pagefault_ts;
+	unsigned int flags;
 	unsigned int fault_count;
 	unsigned long fault_time;
 	struct kgsl_pwr_constraint pwr_constraint;
@@ -403,6 +404,14 @@ struct kgsl_process_private {
 		unsigned int cur;
 		unsigned int max;
 	} stats[KGSL_MEM_ENTRY_MAX];
+};
+
+/**
+ * enum kgsl_process_priv_flags - Private flags for kgsl_process_private
+ * @KGSL_PROCESS_INIT: Set if the process structure has been set up
+ */
+enum kgsl_process_priv_flags {
+	KGSL_PROCESS_INIT = 0,
 };
 
 struct kgsl_device_private {
@@ -637,7 +646,7 @@ static inline int _kgsl_context_get(struct kgsl_context *context)
  * Find the context associated with the given ID number, increase the reference
  * count on it and return it.  The caller must make sure that this call is
  * paired with a kgsl_context_put. This function validates that the context id
- * given is owned by the dev_priv instancet that is passed in.  see
+ * given is owned by the dev_priv instancet that is passed in.  See
  * kgsl_context_get for the internal version that doesn't do the check
  */
 static inline struct kgsl_context *kgsl_context_get_owner(
@@ -724,7 +733,16 @@ static inline void kgsl_cmdbatch_put(struct kgsl_cmdbatch *cmdbatch)
  */
 static inline int kgsl_cmdbatch_sync_pending(struct kgsl_cmdbatch *cmdbatch)
 {
-	return list_empty(&cmdbatch->synclist) ? 0 : 1;
+	int ret;
+
+	if (cmdbatch == NULL)
+		return 0;
+
+	spin_lock(&cmdbatch->lock);
+	ret = list_empty(&cmdbatch->synclist) ? 0 : 1;
+	spin_unlock(&cmdbatch->lock);
+
+	return ret;
 }
 
 #if defined(CONFIG_GPU_TRACEPOINTS)
