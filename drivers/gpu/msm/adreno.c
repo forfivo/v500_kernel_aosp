@@ -2254,6 +2254,12 @@ static int adreno_set_constraint(struct kgsl_device *device,
 		status = -EINVAL;
 		break;
 	}
+	
+	/* If a new constraint has been set for a context, cancel the old one */
+	if ((status == 0) &&
+		(context->id == device->pwrctrl.constraint.owner_id))
+		device->pwrctrl.constraint.type = KGSL_CONSTRAINT_NONE;
+
 
 	return status;
 }
@@ -2319,11 +2325,6 @@ static int adreno_setproperty(struct kgsl_device_private *dev_priv,
 	default:
 		break;
 	}
-
-	/* If a new constraint has been set for a context, cancel the old one */
-	if ((status == 0) &&
-		(context->id == device->pwrctrl.constraint.owner_id))
-		device->pwrctrl.constraint.type = KGSL_CONSTRAINT_NONE;
 
 	return status;
 }
