@@ -311,6 +311,8 @@ static void __ref mako_hotplug_resume(struct work_struct *work)
 {
 	int cpu;
 
+	screen_off_cap(false);
+
 	for_each_possible_cpu(cpu) {
 		if (cpu_online(cpu)) {
 			screen_off_max_freq(cpu, false);
