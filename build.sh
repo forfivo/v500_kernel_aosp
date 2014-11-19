@@ -9,14 +9,14 @@ clear
 
 # Kernel Version
 BASE_KVER="mani"
-VER="_v19"
+VER="_v1"
 KVER=$BASE_KVER$VER
 DEFCONF="mani_v500_defconfig"
 
 # Directories & jobs
 JOBS=`grep -c "processor" /proc/cpuinfo`
 KERNEL_DIR="$HOME/android/v500_kernel_aosp"
-ZIP_DIR="$HOME/android/boot_aosp"
+ZIP_DIR="$HOME/android/boot_lolli"
 
 # start building
 echo -e "${green}"
