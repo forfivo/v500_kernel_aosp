@@ -1367,16 +1367,9 @@ _slumber(struct kgsl_device *device)
 	return 0;
 }
 
-/**
- * kgsl_pwrctrl_wake() - Power up the GPU from a slumber/sleep state
- * @device - Pointer to the kgsl_device struct
- * @priority - Boolean flag to indicate that the GPU start should be run in the
- * higher priority thread
- *
- * Resume the GPU from a lower power state to ACTIVE.  The caller to this
- * fucntion must host the kgsl_device mutex.
- */
-int kgsl_pwrctrl_wake(struct kgsl_device *device, int priority)
+/******************************************************************/
+/* Caller must hold the device mutex. */
+int kgsl_pwrctrl_sleep(struct kgsl_device *device)
 {
 	int status = 0;
 	KGSL_PWR_INFO(device, "sleep device %d\n", device->id);
@@ -1403,9 +1396,16 @@ int kgsl_pwrctrl_wake(struct kgsl_device *device, int priority)
 }
 EXPORT_SYMBOL(kgsl_pwrctrl_sleep);
 
-/******************************************************************/
-/* Caller must hold the device mutex. */
-int kgsl_pwrctrl_wake(struct kgsl_device *device)
+/**
+ * kgsl_pwrctrl_wake() - Power up the GPU from a slumber/sleep state
+ * @device - Pointer to the kgsl_device struct
+ * @priority - Boolean flag to indicate that the GPU start should be run in the
+ * higher priority thread
+ *
+ * Resume the GPU from a lower power state to ACTIVE.  The caller to this
+ * fucntion must host the kgsl_device mutex.
+ */
+int kgsl_pwrctrl_wake(struct kgsl_device *device, int priority)
 {
 	int status = 0;
 	unsigned int context_id;
