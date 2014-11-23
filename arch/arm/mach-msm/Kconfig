@@ -171,7 +171,6 @@ config ARCH_MSM8960
 	select ARM_HAS_SG_CHAIN
 	select MSM_KRAIT_WFE_FIXUP
 	select MSM_IOMMU_GPU_SYNC
-	select HAS_MACH_MEMUTILS
 	select MSM_CPU_PWRCTL
 	select GENERIC_TIME_VSYSCALL
 	select USE_USER_ACCESSIBLE_TIMERS
@@ -2676,12 +2675,6 @@ config LCD_KCAL_STANDALONE
         default n
         help
           Enable MSM generic LCDC temperature Calibration.
-
-config HAS_MACH_MEMUTILS
-	default n
-	bool "Motorola MSM memcpy enhancements"
-	help
-	Faster memcpy performance for Krait
 
 endif
 config LGE_IRRC
