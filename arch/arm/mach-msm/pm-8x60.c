@@ -22,6 +22,7 @@
 #include <linux/ktime.h>
 #include <linux/pm.h>
 #include <linux/pm_qos.h>
+#include <linux/quickwakeup.h>
 #include <linux/smp.h>
 #include <linux/suspend.h>
 #include <linux/tick.h>
@@ -1267,6 +1268,7 @@ core_initcall(msm_pm_setup_saved_state);
 static const struct platform_suspend_ops msm_pm_ops = {
 	.enter = msm_pm_enter,
 	.valid = suspend_valid_only_mem,
+	.suspend_again = quickwakeup_suspend_again,
 };
 
 static void setup_broadcast_timer(void *arg)
