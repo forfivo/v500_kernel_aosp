@@ -46,9 +46,8 @@ static uint32_t lowmem_debug_level = 1;
 static uint32_t lowmem_auto_oom = 1;
 static short lowmem_adj[6] = {
 	0,
-	2,
-	4,
-	9,
+	1,
+	6,
 	12,
 };
 static int lowmem_adj_size = 4;
@@ -78,7 +77,7 @@ static unsigned long lowmem_deathpending_timeout;
 #define lowmem_print(level, x...)			\
 	do {						\
 		if (lowmem_debug_level >= (level))	\
-			printk(x);			\
+			pr_info(x);			\
 	} while (0)
 
 static bool avoid_to_kill(uid_t uid)
@@ -124,6 +123,9 @@ static int test_task_flag(struct task_struct *p, int flag)
 
 	return 0;
 }
+
+static DEFINE_MUTEX(scan_mutex);
+static DEFINE_MUTEX(auto_oom_mutex);
 
 int can_use_cma_pages(gfp_t gfp_mask)
 {
@@ -295,8 +297,6 @@ static struct task_struct *pick_next_from_adj_tree(struct task_struct *task);
 static struct task_struct *pick_first_task(void);
 static struct task_struct *pick_last_task(void);
 #endif
-
-static DEFINE_MUTEX(scan_mutex);
 
 static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 {
@@ -484,15 +484,20 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 static void low_mem_early_suspend(struct early_suspend *handler)
 {
 	if (lowmem_auto_oom) {
+		mutex_lock(&auto_oom_mutex);
 		memcpy(lowmem_minfree_screen_on, lowmem_minfree, sizeof(lowmem_minfree));
 		memcpy(lowmem_minfree, lowmem_minfree_screen_off, sizeof(lowmem_minfree_screen_off));
+		mutex_unlock(&auto_oom_mutex);
 	}
 }
 
 static void low_mem_late_resume(struct early_suspend *handler)
 {
-	if (lowmem_auto_oom)
+	if (lowmem_auto_oom) {
+		mutex_lock(&auto_oom_mutex);
 		memcpy(lowmem_minfree, lowmem_minfree_screen_on, sizeof(lowmem_minfree_screen_on));
+		mutex_unlock(&auto_oom_mutex);
+	}
 }
 
 static struct early_suspend low_mem_suspend = {
@@ -689,8 +694,8 @@ module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 module_param_array_named(minfree_screen_off, lowmem_minfree_screen_off, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
-module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
 module_param_named(auto_oom, lowmem_auto_oom, uint, S_IRUGO | S_IWUSR);
+module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
 
 module_init(lowmem_init);
 module_exit(lowmem_exit);
