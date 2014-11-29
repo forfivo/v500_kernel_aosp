@@ -122,7 +122,7 @@
 #define MSM_ION_MFC_META_SIZE  0x40000 /* 256 Kbytes */
 #define MSM_CONTIG_MEM_SIZE  0x65000
 #ifdef CONFIG_MSM_IOMMU
-#define MSM_ION_MM_SIZE		0x5F00000 //came from g ics for stability issue org : 0x3800000
+#define MSM_ION_MM_SIZE		0x7300000 //came from g ics for stability issue org : 0x3800000
 #define MSM_ION_SF_SIZE		0
 #define MSM_ION_QSECOM_SIZE	0x780000 /* (7.5MB) */
 #define MSM_ION_HEAP_NUM	8
@@ -315,17 +315,7 @@ static struct ion_cp_heap_pdata cp_mm_apq8064_ion_pdata = {
 	.reusable = FMEM_ENABLED,
 	.mem_is_fmem = FMEM_ENABLED,
 	.fixed_position = FIXED_MIDDLE,
-// jungjoo.nahm@lge.com [START]
-// As per QC case #01116834, adjust is_cma value based on CONFIG_CMA kernel feature.
-// To QC integrator, please keep this SW change. It impacts to playback a widevine DRM contents
-//20130401, justin.yun@lge.com, To avoid memory fail when starting Miracast [START]
-//#ifdef CONFIG_CMA
-//	.is_cma = 1,
-//#else
-        .is_cma = 0,
-//#endif
-//20130401, justin.yun@lge.com, To avoid memory fail when starting Miracast [END]
-// jungjoo.nahm@lge.com [END]
+	.is_cma = 0,
 	.no_nonsecure_alloc = 1,
 };
 
@@ -1991,12 +1981,12 @@ static struct msm_bus_vectors qseecom_clks_init_vectors[] = {
 		.ab = 0,
 		.ib = 0,
 	},
-        {
-                .src = MSM_BUS_MASTER_ADM_PORT1,
-                .dst = MSM_BUS_SLAVE_GSBI1_UART,
-                .ab = 0,
-                .ib = 0,
-        },
+	{
+		.src = MSM_BUS_MASTER_ADM_PORT1,
+		.dst = MSM_BUS_SLAVE_GSBI1_UART,
+		.ab = 0,
+		.ib = 0,
+	},
 	{
 		.src = MSM_BUS_MASTER_SPDM,
 		.dst = MSM_BUS_SLAVE_SPDM,
@@ -2006,45 +1996,45 @@ static struct msm_bus_vectors qseecom_clks_init_vectors[] = {
 };
 
 static struct msm_bus_vectors qseecom_enable_dfab_vectors[] = {
-        {
-                .src = MSM_BUS_MASTER_ADM_PORT0,
-                .dst = MSM_BUS_SLAVE_EBI_CH0,
-                .ab = 70000000UL,
-                .ib = 70000000UL,
-        },
-        {
-                .src = MSM_BUS_MASTER_ADM_PORT1,
-                .dst = MSM_BUS_SLAVE_GSBI1_UART,
-                .ab = 2480000000UL,
-                .ib = 2480000000UL,
-        },
-        {
-                .src = MSM_BUS_MASTER_SPDM,
-                .dst = MSM_BUS_SLAVE_SPDM,
-                .ib = 0,
-                .ab = 0,
-        },
+	{
+		.src = MSM_BUS_MASTER_ADM_PORT0,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
+		.ab = 70000000UL,
+		.ib = 70000000UL,
+	},
+	{
+		.src = MSM_BUS_MASTER_ADM_PORT1,
+		.dst = MSM_BUS_SLAVE_GSBI1_UART,
+		.ab = 2480000000UL,
+		.ib = 2480000000UL,
+	},
+	{
+		.src = MSM_BUS_MASTER_SPDM,
+		.dst = MSM_BUS_SLAVE_SPDM,
+		.ib = 0,
+		.ab = 0,
+	},
 };
 
 static struct msm_bus_vectors qseecom_enable_sfpb_vectors[] = {
-        {
-                .src = MSM_BUS_MASTER_ADM_PORT0,
-                .dst = MSM_BUS_SLAVE_EBI_CH0,
-                .ab = 0,
-                .ib = 0,
-        },
-        {
-                .src = MSM_BUS_MASTER_ADM_PORT1,
-                .dst = MSM_BUS_SLAVE_GSBI1_UART,
-                .ab = 0,
-                .ib = 0,
-        },
-        {
-                .src = MSM_BUS_MASTER_SPDM,
-                .dst = MSM_BUS_SLAVE_SPDM,
-                .ib = (64 * 8) * 1000000UL,
-                .ab = (64 * 8) *  100000UL,
-        },
+	{
+		.src = MSM_BUS_MASTER_ADM_PORT0,
+		.dst = MSM_BUS_SLAVE_EBI_CH0,
+		.ab = 0,
+		.ib = 0,
+	},
+	{
+		.src = MSM_BUS_MASTER_ADM_PORT1,
+		.dst = MSM_BUS_SLAVE_GSBI1_UART,
+		.ab = 0,
+		.ib = 0,
+	},
+	{
+		.src = MSM_BUS_MASTER_SPDM,
+		.dst = MSM_BUS_SLAVE_SPDM,
+		.ib = (64 * 8) * 1000000UL,
+		.ab = (64 * 8) *  100000UL,
+	},
 };
 
 static struct msm_bus_vectors qseecom_enable_dfab_sfpb_vectors[] = {
@@ -2321,9 +2311,9 @@ static struct platform_device msm_tsens_device = {
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 7,
 	.poll_ms = 250,
- 	.limit_temp_degC = 60,
- 	.temp_hysteresis_degC = 10,
- 	.freq_step = 2,
+	.limit_temp_degC = 60,
+	.temp_hysteresis_degC = 10,
+	.freq_step = 2,
 };
 
 #define MSM_SHARED_RAM_PHYS 0x80000000
@@ -4021,7 +4011,7 @@ static void __init apq8064_common_init(void)
 	if (cpu_is_krait_v3()) {
 		struct msm_pm_init_data_type *pdata =
 			msm8064_pm_8x60.dev.platform_data;
-		pdata->retention_calls_tz = false;
+		pdata->retention_calls_tz = false; 
 		apq8064ab_update_retention_spm();
 	}
 	platform_device_register(&msm8064_pm_8x60);

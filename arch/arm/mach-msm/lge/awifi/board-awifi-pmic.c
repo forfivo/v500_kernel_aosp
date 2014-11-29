@@ -463,16 +463,16 @@ void __init apq8064_pm8xxx_gpio_mpp_init(void)
 //	hw_rev_type lge_bd_rev = HW_REV_EVB1;
 //	lge_bd_rev = lge_get_board_revno();
 
-		apq8064_configure_gpios(pm8921_disabled_gpios, ARRAY_SIZE(pm8921_disabled_gpios));
+	apq8064_configure_gpios(pm8921_disabled_gpios, ARRAY_SIZE(pm8921_disabled_gpios));
 
-		for (i = 0; i < ARRAY_SIZE(pm8xxx_disabled_mpps); i++) {
-			rc = pm8xxx_mpp_config(pm8xxx_disabled_mpps[i].mpp,
-						&pm8xxx_disabled_mpps[i].config);
-			if (rc) {
-				pr_err("%s: pm8xxx_mpp_config: rc=%d\n", __func__, rc);
-				break;
-			}
-		}	
+	for (i = 0; i < ARRAY_SIZE(pm8xxx_disabled_mpps); i++) {
+		rc = pm8xxx_mpp_config(pm8xxx_disabled_mpps[i].mpp,
+					&pm8xxx_disabled_mpps[i].config);
+		if (rc) {
+			pr_err("%s: pm8xxx_mpp_config: rc=%d\n", __func__, rc);
+			break;
+		}
+	}
 #endif
 
 	if (socinfo_get_pmic_model() != PMIC_MODEL_PM8917)
@@ -966,7 +966,7 @@ static struct pm8xxx_keypad_platform_data keypad_data = {
 };
 #if defined (CONFIG_PMIC8XXX_VIBRATOR) || ((CONFIG_MACH_APQ8064_AWIFI) && (CONFIG_TSPDRV))
 static struct pm8xxx_vibrator_platform_data pm8xxx_vibrator_pdata = {
-	.initial_vibrate_ms = 500,
+	.initial_vibrate_ms = 0,
 	.max_timeout_ms = 30000,
 	.level_mV =2300,
 };

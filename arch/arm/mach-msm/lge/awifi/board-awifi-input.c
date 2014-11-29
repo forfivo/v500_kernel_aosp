@@ -91,11 +91,7 @@ static u8 t25_config_s[] = { MXT_SPT_SELFTEST_T25,
 	0, 0, 0, 0, 0xC8, 0x88, 0x13, 0, 0, 0,
 	0
 };
-/*
-static u8 t27_config_s[] = { MXT_PROCI_TWOTOUCH_T27,
-	0, 0, 0, 0, 0, 0, 0
-};
-*/
+
 static u8 t37_config_s[] = { MXT_DEBUG_DIAGNOSTIC_T37,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00,
 	0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x02, 0x00,
@@ -260,7 +256,6 @@ static const u8 *mxt1188S_config[] = {
 	t24_config_s,
 #endif
 	t25_config_s,
-//	t27_config_s,
 	t40_config_s,
 	t42_config_s,
 	t43_config_s,
@@ -299,70 +294,16 @@ static u8 t47_normal_config[] = { MXT_PROCI_STYLUS_T47, 1,
 static u8 t47_charger_config[] = { MXT_PROCI_STYLUS_T47, 1,
 	8, 2,
 };
- /*
-static u8 t46_normal_config[] = { MXT_SPT_CTECONFIG_T46, 1,
-	3, 24,
-};
 
-static u8 t46_charger_config[] = { MXT_SPT_CTECONFIG_T46, 1,
-	3, 16
-};
-
-static u8 t62_normal_config[] = { MXT_PROCG_NOISESUPPRESSION_T62, 18,
-	1, 0,
-	2, 16,
-	4, 3,
-	6, 16,
-	8, 15,
-	10, 0,
-	11, 0,
-	12, 0,
-	13, 0,
-	15, 0,
-	22, 32,
-	23, 10,
-	24, 63,
-	25, 8,
-	30, 0,
-	31, 0,
-	32, 0,
-	33, 0,
-};
-
-static u8 t62_charger_config[] = { MXT_PROCG_NOISESUPPRESSION_T62, 18,
-	1, 40,
-	2, 80,
-	4, 11,
-	6, 32,
-	8, 50,
-	10, 35,
-	11, 43,
-	12, 30,
-	13, 12,
-	15, 50,
-	22, 24,
-	23, 2,
-	24, 100,
-	25, 12,
-	30, 35,
-	31, 43,
-	32, 30,
-	33, 12,
-};
-*/
 static const u8 *mxt1188S_restore_config[] = {
 	t9_normal_config,
-//	t46_normal_config,
 	t47_normal_config,
-//	t62_normal_config,
 	end_config_s
 };
 
 static const u8 *mxt1188S_charger_config[] = {
 	t9_charger_config,
-//	t46_charger_config,
 	t47_charger_config,
-//	t62_charger_config,
 	end_config_s
 };
 
@@ -452,13 +393,11 @@ static const u8 *mxt1188S_unpen_config[] = {
 static u8 t7_sus_config[] = { MXT_GEN_POWER_T7, 2,
 	0, 64,
 	1, 12,
-//	2, 4
 };
 
 static u8 t7_act_config[] = { MXT_GEN_POWER_T7, 2,
 	0, 32,
 	1, 9,
-//	2, 5
 };
 
 static u8 t8_sus_config[] = { MXT_GEN_ACQUIRE_T8, 5,
@@ -650,6 +589,10 @@ static struct mxt_platform_data touch_mxt1188S_pdata = {
 	.accuracy_filter_enable = 0,
 	.ghost_detection_enable = 0,
 #endif
+#ifdef CONFIG_TOUCHSCREEN_ATMEL_KNOCK_ON
+	.knock_on_enable = false,
+#endif
+	.smart_cover_enable = true,
 };
 
 static struct i2c_board_info atmel_mxt1188S_i2c_bdinfo[] __initdata = {

@@ -120,7 +120,9 @@ VREG_CONSUMERS(L14) = {
 };
 VREG_CONSUMERS(L15) = {
 	REGULATOR_SUPPLY("8921_l15",		NULL),
+#ifdef CONFIG_TOUCHSCREEN_ATMEL_MXT1188S
 	REGULATOR_SUPPLY("touch_vdd",		NULL),
+#endif
 };
 VREG_CONSUMERS(L16) = {
 	REGULATOR_SUPPLY("8921_l16",		NULL),
@@ -868,4 +870,10 @@ void __init configure_apq8064_pm8917_power_grid(void)
 				= ARRAY_SIZE(vreg_consumers_8917_S1);
 		}
 	}
+
+	/*
+	 * Switch to 8960_PM8917 rpm-regulator version so that TCXO workaround
+	 * is applied to PM8917 regulators L25, L26, L27, and L28.
+	 */
+	apq8064_rpm_regulator_pdata.version = RPM_VREG_VERSION_8960_PM8917;
 }

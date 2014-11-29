@@ -363,7 +363,7 @@ static int anx7808_dvdd_onoff(bool on)
 	}
 
 	if (on) {
-		rc = regulator_set_optimum_mode(anx7808_dvdd_reg, 100000); //FIXME - need to check of load current
+		rc = regulator_set_optimum_mode(anx7808_dvdd_reg, 100000);
 		if (rc < 0) {
 			pr_err("%s : set optimum mode 100000, anx7808_dvdd_reg failed \
 					(%d)\n", __func__, rc);
@@ -533,7 +533,7 @@ static void __init lge_add_i2c_anx7808_device(void)
 		i2c_anx7808_devices.info,
 		i2c_anx7808_devices.len);
 }
-#endif
+#endif /* CONFIG_SLIMPORT_ANX7808 */
 
 #ifdef CONFIG_LGE_IRRC
 #define GPIO_RC_EN_REV_A_B          62
@@ -655,7 +655,7 @@ static int irrc_init(void)
 //			ARRAY_SIZE(gpio37_irrc_configs));
 
 	/* gpio init */
-	printk("[suker][IRRC][%s] \n", __func__);
+	pr_info("[suker][IRRC][%s] \n", __func__);
 	rc = gpio_request(GPIO_IRRC_PWM, "irrc_pwm");
 	gpio_direction_output(GPIO_IRRC_PWM, 1);
 	if (unlikely(rc < 0))
@@ -670,7 +670,7 @@ static struct android_irrc_platform_data irrc_data = {
 };
 
 static struct platform_device android_irrc_device = {
-	.name   = "android-irrc",
+	.name = "android-irrc",
 	.id = -1,
 	.dev = {
 		.platform_data = &irrc_data,
