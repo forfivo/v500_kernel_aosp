@@ -427,6 +427,8 @@ int adreno_dump(struct kgsl_device *device, int manual)
 
 	mb();
 
+	msm_clk_dump_debug_info();
+
 	if (adreno_dev->gpudev->postmortem_dump)
 		adreno_dev->gpudev->postmortem_dump(adreno_dev);
 

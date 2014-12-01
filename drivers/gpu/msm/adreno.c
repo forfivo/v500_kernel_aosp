@@ -1022,7 +1022,7 @@ static int adreno_iommu_setstate(struct kgsl_device *device,
 	struct kgsl_context *context;
 	struct adreno_context *adreno_ctx = NULL;
 	struct adreno_ringbuffer *rb = &adreno_dev->ringbuffer;
-	unsigned int result;
+	unsigned int result = 0;
 
 	if (adreno_use_default_setstate(adreno_dev)) {
 		kgsl_mmu_device_setstate(&device->mmu, flags);

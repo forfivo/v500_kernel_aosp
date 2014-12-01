@@ -589,10 +589,6 @@ static struct mxt_platform_data touch_mxt1188S_pdata = {
 	.accuracy_filter_enable = 0,
 	.ghost_detection_enable = 0,
 #endif
-#ifdef CONFIG_TOUCHSCREEN_ATMEL_KNOCK_ON
-	.knock_on_enable = false,
-#endif
-	.smart_cover_enable = true,
 };
 
 static struct i2c_board_info atmel_mxt1188S_i2c_bdinfo[] __initdata = {
