@@ -217,11 +217,9 @@ static void tz_busy(struct kgsl_device *device,
 static void tz_sleep(struct kgsl_device *device,
 	struct kgsl_pwrscale *pwrscale)
 {
-	struct kgsl_pwrctrl *pwr = &device->pwrctrl;  
 	struct tz_priv *priv = pwrscale->priv;
 
 	__secure_tz_entry2(TZ_RESET_ID, 0, 0);
-	kgsl_pwrctrl_pwrlevel_change(device, pwr->num_pwrlevels - 2);	
 	priv->bin.total_time = 0;
 	priv->bin.busy_time = 0;
 }
