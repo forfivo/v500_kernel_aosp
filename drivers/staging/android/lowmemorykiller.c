@@ -48,15 +48,19 @@ static int lowmem_adj[6] = {
 	1,
 	6,
 	12,
+	13,
+	15,
 };
-static int lowmem_adj_size = 4;
+static int lowmem_adj_size = 6;
 static int lowmem_minfree[6] = {
-	3 * 512,	/* 6MB */
-	2 * 1024,	/* 8MB */
-	4 * 1024,	/* 16MB */
-	16 * 1024,	/* 64MB */
+	 3 *  512,	/* Foreground App: 	6 MB	*/
+	 2 * 1024,	/* Visible App: 	8 MB	*/
+	 4 * 1024,	/* Secondary Server: 	16 MB	*/
+	16 * 1024,	/* Hidden App: 		64 MB	*/
+	28 * 1024,	/* Content Provider: 	112 MB	*/
+	32 * 1024,	/* Empty App: 		128 MB	*/
 };
-static int lowmem_minfree_size = 4;
+static int lowmem_minfree_size = 6;
 static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
@@ -476,7 +480,7 @@ static int lowmem_shrink(struct shrinker *s, struct shrink_control *sc)
 
 static struct shrinker lowmem_shrinker = {
 	.shrink = lowmem_shrink,
-	.seeks = DEFAULT_SEEKS * 16
+	.seeks = 32
 };
 
 static int __init lowmem_init(void)
@@ -491,7 +495,7 @@ static void __exit lowmem_exit(void)
 }
 
 #ifdef CONFIG_ANDROID_LOW_MEMORY_KILLER_AUTODETECT_OOM_ADJ_VALUES
-static int lowmem_oom_adj_to_oom_score_adj(int oom_adj)
+static short lowmem_oom_adj_to_oom_score_adj(short oom_adj)
 {
 	if (oom_adj == OOM_ADJUST_MAX)
 		return OOM_SCORE_ADJ_MAX;
@@ -502,8 +506,8 @@ static int lowmem_oom_adj_to_oom_score_adj(int oom_adj)
 static void lowmem_autodetect_oom_adj_values(void)
 {
 	int i;
-	int oom_adj;
-	int oom_score_adj;
+	short oom_adj;
+	short oom_score_adj;
 	int array_size = ARRAY_SIZE(lowmem_adj);
 
 	if (lowmem_adj_size < array_size)
@@ -525,7 +529,7 @@ static void lowmem_autodetect_oom_adj_values(void)
 		oom_adj = lowmem_adj[i];
 		oom_score_adj = lowmem_oom_adj_to_oom_score_adj(oom_adj);
 		lowmem_adj[i] = oom_score_adj;
-		lowmem_print(1, "oom_adj %d => oom_score_adj %d\n",
+		lowmem_print(1, "oom_adj %hd => oom_score_adj %hd\n",
 			     oom_adj, oom_score_adj);
 	}
 }
@@ -561,7 +565,7 @@ static struct kernel_param_ops lowmem_adj_array_ops = {
 static const struct kparam_array __param_arr_adj = {
 	.max = ARRAY_SIZE(lowmem_adj),
 	.num = &lowmem_adj_size,
-	.ops = &param_ops_int,
+	.ops = &param_ops_short,
 	.elemsize = sizeof(lowmem_adj[0]),
 	.elem = lowmem_adj,
 };
@@ -651,7 +655,7 @@ module_param_named(cost, lowmem_shrinker.seeks, int, S_IRUGO | S_IWUSR);
 __module_param_call(MODULE_PARAM_PREFIX, adj,
 		    &lowmem_adj_array_ops,
 		    .arr = &__param_arr_adj,
-		    S_IRUGO | S_IWUSR, -1);
+		    S_IRUGO | S_IWUSR, 0644);
 __MODULE_PARM_TYPE(adj, "array of short");
 #else
 module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size,
