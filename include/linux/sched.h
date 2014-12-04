@@ -1271,7 +1271,7 @@ struct task_struct {
 	const struct sched_class *sched_class;
 	struct sched_entity se;
 	struct sched_rt_entity rt;
-	struct ravg ravg;	
+	struct ravg ravg;
 #ifdef CONFIG_CGROUP_SCHED
 	struct task_group *sched_task_group;
 #endif
@@ -2060,8 +2060,13 @@ extern unsigned int sysctl_sched_wakeup_granularity;
 extern unsigned int sysctl_sched_child_runs_first;
 extern unsigned int sysctl_sched_wake_to_idle;
 extern unsigned int sysctl_sched_wakeup_load_threshold;
-extern unsigned int sysctl_sched_yield_sleep_duration;
-extern int sysctl_sched_yield_sleep_threshold;
+#ifdef CONFIG_SCHED_DEBUG
+extern __read_mostly unsigned int sysctl_sched_yield_sleep_duration;
+extern __read_mostly int sysctl_sched_yield_sleep_threshold;
+#else
+extern const unsigned int sysctl_sched_yield_sleep_duration;
+extern const int sysctl_sched_yield_sleep_threshold;
+#endif
 
 enum sched_tunable_scaling {
 	SCHED_TUNABLESCALING_NONE,
@@ -2724,11 +2729,11 @@ extern void signal_wake_up_state(struct task_struct *t, unsigned int state);
 
 static inline void signal_wake_up(struct task_struct *t, bool resume)
 {
-  signal_wake_up_state(t, resume ? TASK_WAKEKILL : 0);
+	signal_wake_up_state(t, resume ? TASK_WAKEKILL : 0);
 }
 static inline void ptrace_signal_wake_up(struct task_struct *t, bool resume)
 {
-  signal_wake_up_state(t, resume ? __TASK_TRACED : 0);
+	signal_wake_up_state(t, resume ? __TASK_TRACED : 0);
 }
 
 /*

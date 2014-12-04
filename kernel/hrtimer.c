@@ -675,10 +675,10 @@ static inline int hrtimer_enqueue_reprogram(struct hrtimer *timer,
 
 static inline ktime_t hrtimer_update_base(struct hrtimer_cpu_base *base)
 {
-  ktime_t *offs_real = &base->clock_base[HRTIMER_BASE_REALTIME].offset;
-  ktime_t *offs_boot = &base->clock_base[HRTIMER_BASE_BOOTTIME].offset;
+	ktime_t *offs_real = &base->clock_base[HRTIMER_BASE_REALTIME].offset;
+	ktime_t *offs_boot = &base->clock_base[HRTIMER_BASE_BOOTTIME].offset;
 
-  return ktime_get_update_offsets(offs_real, offs_boot);
+	return ktime_get_update_offsets(offs_real, offs_boot);
 }
 
 /*
@@ -694,7 +694,6 @@ static void retrigger_next_event(void *arg)
 		return;
 
 	raw_spin_lock(&base->lock);
-
 	hrtimer_update_base(base);
 	hrtimer_force_reprogram(base, 0);
 	raw_spin_unlock(&base->lock);
@@ -725,7 +724,6 @@ static int hrtimer_switch_to_hres(void)
 		base->clock_base[i].resolution = KTIME_HIGH_RES;
 
 	tick_setup_sched_timer();
-
 	/* "Retrigger" the interrupt to get things going */
 	retrigger_next_event(NULL);
 	local_irq_restore(flags);
