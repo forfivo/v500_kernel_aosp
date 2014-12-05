@@ -17,10 +17,12 @@
 #define _LINUX_WAKELOCK_H
 
 #include <linux/ktime.h>
-#include <linux/module.h>
-#include <linux/kallsyms.h>
 #include <linux/device.h>
 
+#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(CONFIG_MACH_LGE)
+#include <linux/module.h>
+#include <linux/kallsyms.h>
+#endif
 
 /* A wake_lock prevents the system from entering suspend or other low power
  * states when active. If the type is set to WAKE_LOCK_SUSPEND, the wake_lock
@@ -35,6 +37,10 @@ enum {
 struct wake_lock {
 	struct wakeup_source ws;
 };
+
+#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(CONFIG_MACH_LGE)
+int wake_lock_active_name(char *name);
+#endif
 
 static inline void wake_lock_init(struct wake_lock *lock, int type,
 				  const char *name)
@@ -67,7 +73,7 @@ static inline int wake_lock_active(struct wake_lock *lock)
 	return lock->ws.active;
 }
 
-#ifdef CONFIG_LGE_SUSPEND_AUTOTEST
+#if defined(CONFIG_HAS_EARLYSUSPEND) && defined(CONFIG_MACH_LGE)
 enum lateresume_wq_stat_step {
 	LATERESUME_START = 1,
 	LATERESUME_MUTEXLOCK,
@@ -109,7 +115,6 @@ struct suspend_wq_stats {
 };
 
 extern struct suspend_wq_stats suspend_wq_stats;
-
 static inline void save_lateresume_step(int step)
 {
 	suspend_wq_stats.lateresume_stat = step;
@@ -140,7 +145,6 @@ static inline void save_lateresume_call(char *name)
 static inline void save_earlysuspend_call(char *name)
 {
 	char *call_name = "end_of_lateresume";
-
 	if (name)
 		call_name = name;
 
@@ -149,4 +153,5 @@ static inline void save_earlysuspend_call(char *name)
 			sizeof(suspend_wq_stats.last_earlysuspend_call));
 }
 #endif
+
 #endif

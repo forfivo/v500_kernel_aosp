@@ -42,7 +42,7 @@ struct early_suspend {
 	void (*suspend)(struct early_suspend *h);
 	void (*resume)(struct early_suspend *h);
 #endif
-#ifdef CONFIG_LGE_EARLYSUSPEND_FUNC_TIME
+#ifdef CONFIG_MACH_LGE
 	int resume_avg;
 	int resume_max;
 	int resume_count;

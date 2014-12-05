@@ -21,7 +21,7 @@
 #include <linux/device.h>
 #include <linux/interrupt.h>
 #include <linux/delay.h>
-#include <linux/wakelock.h>
+#include <linux/pm.h>
 #include <linux/platform_device.h>
 #include <linux/sched.h>
 #include <linux/pm_qos.h>
@@ -38,6 +38,8 @@
 
 #define MAX_SMD_TTYS 37
 #define MAX_TTY_BUF_SIZE 2048
+#define TTY_PUSH_WS_DELAY 500
+#define MAX_RA_WAKE_LOCK_NAME_LEN 32
 
 static DEFINE_MUTEX(smd_tty_lock);
 
@@ -45,22 +47,63 @@ static uint smd_tty_modem_wait;
 module_param_named(modem_wait, smd_tty_modem_wait,
 			uint, S_IRUGO | S_IWUSR | S_IWGRP);
 
+static struct wakeup_source read_in_suspend_ws;
+
+/**
+ * struct smd_tty_info - context for an individual SMD TTY device
+ *
+ * @ch:  SMD channel handle
+ * @port:  TTY port context structure
+ * @device_ptr:  TTY device pointer
+ * @pending_ws:  pending-data wakeup source
+ * @tty_tsklt:  read tasklet
+ * @buf_req_timer:  RX buffer retry timer
+ * @ch_allocated:  completion set when SMD channel is allocated
+ * @driver:  SMD channel platform driver context structure
+ * @pil:  Peripheral Image Loader handle
+ * @edge:  SMD edge associated with port
+ * @ch_name:  SMD channel name associated with port
+ * @dev_name:  SMD platform device name associated with port
+ *
+ * @open_lock_lha1: open/close lock - used to serialize open/close operations
+ * @open_wait:  Timeout in seconds to wait for SMD port to be created / opened
+ *
+ * @reset_lock_lha2: lock for reset and open state
+ * @in_reset:  True if SMD channel is closed / in SSR
+ * @in_reset_updated:  reset state changed
+ * @is_open:  True if SMD port is open
+ * @ch_opened_wait_queue:  SMD port open/close wait queue
+ *
+ * @ra_lock_lha3:  Read-available lock - used to synchronize reads from SMD
+ * @ra_wakeup_source_name: Name of the read-available wakeup source
+ * @ra_wakeup_source:  Read-available wakeup source
+ */
 struct smd_tty_info {
 	smd_channel_t *ch;
 	struct tty_struct *tty;
-	struct wake_lock wake_lock;
+	struct wakeup_source pending_ws;
 	int open_count;
 	struct tasklet_struct tty_tsklt;
 	struct timer_list buf_req_timer;
 	struct completion ch_allocated;
 	struct platform_driver driver;
 	void *pil;
+	uint32_t edge;
+	char ch_name[SMD_MAX_CH_NAME_LEN];
+	char dev_name[SMD_MAX_CH_NAME_LEN];
+
+	struct mutex open_lock_lha1;
+	unsigned int open_wait;
+
+	spinlock_t reset_lock_lha2;
 	int in_reset;
 	int in_reset_updated;
 	int is_open;
 	wait_queue_head_t ch_opened_wait_queue;
 	spinlock_t reset_lock;
 	struct smd_config *smd;
+	char ra_wakeup_source_name[MAX_RA_WAKE_LOCK_NAME_LEN];
+	struct wakeup_source ra_wakeup_source;
 };
 
 /**
@@ -175,10 +218,13 @@ static void smd_tty_read(unsigned long param)
 			printk(KERN_ERR "OOPS - smd_tty_buffer mismatch?!");
 		}
 
-#ifdef CONFIG_HAS_WAKELOCK
-		pr_debug("%s: lock wakelock %s\n", __func__, info->wake_lock.name);
-#endif
-		wake_lock_timeout(&info->wake_lock, HZ / 2);
+		/*
+		 * Keep system awake long enough to allow the TTY
+		 * framework to pass the flip buffer to any waiting
+		 * userspace clients.
+		 */
+		__pm_wakeup_event(&info->pending_ws, TTY_PUSH_WS_DELAY);
+
 		tty_flip_buffer_push(tty);
 	}
 
@@ -335,8 +381,11 @@ static int smd_tty_open(struct tty_struct *tty, struct file *f)
 		info->tty = tty;
 		tasklet_init(&info->tty_tsklt, smd_tty_read,
 			     (unsigned long)info);
-		wake_lock_init(&info->wake_lock, WAKE_LOCK_SUSPEND,
-				smd_tty[n].smd->port_name);
+	wakeup_source_init(&info->pending_ws, info->ch_name);
+	scnprintf(info->ra_wakeup_source_name, MAX_RA_WAKE_LOCK_NAME_LEN,
+		  "SMD_TTY_%s_RA", info->ch_name);
+	wakeup_source_init(&info->ra_wakeup_source,
+			info->ra_wakeup_source_name);
 		if (!info->ch) {
 			res = smd_named_open_on_edge(smd_tty[n].smd->port_name,
 							smd_tty[n].smd->edge,
@@ -389,7 +438,8 @@ static void smd_tty_close(struct tty_struct *tty, struct file *f)
 		spin_unlock_irqrestore(&info->reset_lock, flags);
 		if (info->tty) {
 			tasklet_kill(&info->tty_tsklt);
-			wake_lock_destroy(&info->wake_lock);
+			wakeup_source_trash(&info->pending_ws);
+			wakeup_source_trash(&info->ra_wakeup_source);
 			info->tty = 0;
 		}
 		tty->driver_data = 0;
