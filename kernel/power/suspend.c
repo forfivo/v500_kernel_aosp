@@ -25,12 +25,7 @@
 #include <linux/suspend.h>
 #include <linux/syscore_ops.h>
 #include <linux/rtc.h>
-#include <linux/ftrace.h>
 #include <trace/events/power.h>
-
-#ifdef CONFIG_MACH_LGE
-#include <mach/lge/lge_blocking_monitor.h>
-#endif
 
 #include "power.h"
 
@@ -210,6 +205,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 			goto Platform_wake;
 	}
 
+	if (suspend_test(TEST_PLATFORM))
+		goto Platform_wake;
+
 	/*
 	 * PM_SUSPEND_FREEZE equals
 	 * frozen processes + suspended devices + idle processors.
@@ -221,8 +219,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 		goto Platform_wake;
 	}
 
-	if (suspend_test(TEST_PLATFORM))
-		goto Platform_wake;
+	error = disable_nonboot_cpus();
+	if (error || suspend_test(TEST_CPUS))
+		goto Enable_cpus;
 
 	arch_suspend_disable_irqs();
 	BUG_ON(!irqs_disabled());
@@ -239,6 +238,9 @@ static int suspend_enter(suspend_state_t state, bool *wakeup)
 
 	arch_suspend_enable_irqs();
 	BUG_ON(irqs_disabled());
+
+ Enable_cpus:
+	enable_nonboot_cpus();
 
  Platform_wake:
 	if (need_suspend_ops(state) && suspend_ops->wake)
@@ -276,11 +278,10 @@ int suspend_devices_and_enter(suspend_state_t state)
 			goto Close;
 	}
 	suspend_console();
-	ftrace_stop();
 	suspend_test_start();
 	error = dpm_suspend_start(PMSG_SUSPEND);
 	if (error) {
-		printk(KERN_ERR "PM: Some devices failed to suspend\n");
+		pr_err("PM: Some devices failed to suspend, or early wake event detected\n");
 		goto Recover_platform;
 	}
 	suspend_test_finish("suspend devices");
@@ -296,7 +297,6 @@ int suspend_devices_and_enter(suspend_state_t state)
 	suspend_test_start();
 	dpm_resume_end(PMSG_RESUME);
 	suspend_test_finish("resume devices");
-	ftrace_start();
 	resume_console();
  Close:
 	if (need_suspend_ops(state) && suspend_ops->end)
@@ -381,14 +381,7 @@ static int enter_state(suspend_state_t state)
 
  Finish:
 	pr_debug("PM: Finishing wakeup.\n");
-#ifdef CONFIG_MACH_LGE
-	start_monitor_blocking(suspend_monitor_id,
-		jiffies + usecs_to_jiffies(3000000));
-#endif
 	suspend_finish();
-#ifdef CONFIG_MACH_LGE
-	end_monitor_blocking(suspend_monitor_id);
-#endif
  Unlock:
 	mutex_unlock(&pm_mutex);
 	return error;
@@ -439,17 +432,3 @@ static int __init suspendsync_setup(char *str)
 	return 1;
 }
 __setup("suspendsync=", suspendsync_setup);
-
-#ifdef CONFIG_MACH_LGE
-static int __init create_suspend_blocking_monitor(void)
-{
-	suspend_monitor_id = create_blocking_monitor("suspend");
-
-	if (suspend_monitor_id < 0)
-		return suspend_monitor_id;
-
-	return 0;
-}
-
-late_initcall(create_suspend_blocking_monitor);
-#endif

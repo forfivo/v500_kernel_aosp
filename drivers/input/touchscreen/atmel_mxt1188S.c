@@ -27,8 +27,8 @@
 #include <linux/slab.h>
 #include <linux/regulator/consumer.h>
 #include <linux/gpio.h>
-#ifdef CONFIG_HAS_EARLYSUSPEND
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
 #endif
 #include <linux/time.h>
 
@@ -197,12 +197,12 @@ u8 latest_firmware[] = {
 static bool must_calibration;
 static bool is_probing;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 /* Early-suspend level */
 #define MXT_SUSPEND_LEVEL 1
 
-static void mxt_early_suspend(struct early_suspend *h);
-static void mxt_late_resume(struct early_suspend *h);
+static void mxt_early_suspend(struct power_suspend *h);
+static void mxt_late_resume(struct power_suspend *h);
 #endif
 
 struct mxt_info {
@@ -413,8 +413,8 @@ struct mxt_data {
 	struct accuracy_filter_info	accuracy_filter;
 	struct touch_data ts_data;
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_POWERSUSPEND
+	struct power_suspend power_suspend;
 #endif
 	u8 charger_state;
 #ifdef CHANGE_PEN_CFG
@@ -464,7 +464,7 @@ struct mxt_data *test_data = NULL;
 //#define CUST_G2_TOUCH_WAKEUP_GESTURE
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_KNOCK_ON
 //static int touch_gesture_enable = 1;
-static struct wake_lock touch_wake_lock;
+static struct wakeup_source touch_wake_lock;
 static struct mutex i2c_suspend_lock;
 //static void touch_double_tap_wakeup_enable(struct lge_touch_data *ts);
 static bool suspended_due_to_smart_cover = false;
@@ -5018,11 +5018,11 @@ static int __devinit mxt_probe(struct i2c_client *client,
 		data->accuracy_filter.touch_max_count = one_sec / 2;
 	}
 #endif
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + MXT_SUSPEND_LEVEL;
-	data->early_suspend.suspend = mxt_early_suspend;
-	data->early_suspend.resume = mxt_late_resume;
-	register_early_suspend(&data->early_suspend);
+#ifdef CONFIG_POWERSUSPEND
+	//data->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN + MXT_SUSPEND_LEVEL;
+	data->power_suspend.suspend = mxt_early_suspend;
+	data->power_suspend.resume = mxt_late_resume;
+	register_power_suspend(&data->power_suspend);
 #endif
 
 	/* disabled report touch event to prevent unnecessary event.
@@ -5075,8 +5075,8 @@ static int __devexit mxt_remove(struct i2c_client *client)
 {
 	struct mxt_data *data = i2c_get_clientdata(client);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&data->early_suspend);
+#ifdef CONFIG_POWERSUSPEND
+	unregister_power_suspend(&data->power_suspend);
 #endif
 
 	if (data->mem_access_attr.attr.name)
@@ -5153,23 +5153,23 @@ static int mxt_resume(struct device *dev)
 }
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static void mxt_early_suspend(struct early_suspend *h)
+#ifdef CONFIG_POWERSUSPEND
+static void mxt_early_suspend(struct power_suspend *h)
 {
-	struct mxt_data *data = container_of(h, struct mxt_data, early_suspend);
+	struct mxt_data *data = container_of(h, struct mxt_data, power_suspend);
 
 	mxt_suspend(&data->client->dev);
 }
 
-static void mxt_late_resume(struct early_suspend *h)
+static void mxt_late_resume(struct power_suspend *h)
 {
-	struct mxt_data *data = container_of(h, struct mxt_data, early_suspend);
+	struct mxt_data *data = container_of(h, struct mxt_data, power_suspend);
 
 	mxt_resume(&data->client->dev);
 }
 #endif
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 static const struct dev_pm_ops mxt_pm_ops = {
 	.suspend	= NULL,
 	.resume		= NULL,

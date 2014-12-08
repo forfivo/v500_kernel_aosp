@@ -27,7 +27,7 @@
 #include <linux/delay.h>
 #include <linux/input.h>
 #include <linux/jiffies.h>
-#include <linux/earlysuspend.h>
+#include <linux/powersuspend.h>
 
 #define MAKO_HOTPLUG "mako_hotplug"
 
@@ -325,21 +325,21 @@ static void __ref mako_hotplug_resume(struct work_struct *work)
 	pr_info("%s: resume\n", MAKO_HOTPLUG);
 }
 
-static void mako_hotplug_early_suspend(struct early_suspend *handler)
+static void mako_hotplug_power_suspend(struct power_suspend *handler)
 {
 	schedule_work(&suspend);
 }
 
-static void mako_hotplug_late_resume(struct early_suspend *handler)
+static void mako_hotplug_power_resume(struct power_suspend *handler)
 {
 	schedule_work(&resume);
 }
 
-static struct early_suspend early_suspend =
+static struct power_suspend power_suspend =
 {
-	.level = EARLY_SUSPEND_LEVEL_DISABLE_FB,
-	.suspend = mako_hotplug_early_suspend,
-	.resume = mako_hotplug_late_resume,
+	//.level = EARLY_SUSPEND_LEVEL_DISABLE_FB,
+	.suspend = mako_hotplug_power_suspend,
+	.resume = mako_hotplug_power_resume,
 };
 
 /*
@@ -554,7 +554,7 @@ static int __devinit mako_hotplug_probe(struct platform_device *pdev)
 		goto err;
 	}
 
-	register_early_suspend(&early_suspend);
+	register_power_suspend(&power_suspend);
 
 	INIT_WORK(&resume, mako_hotplug_resume);
 	INIT_WORK(&suspend, mako_hotplug_suspend);

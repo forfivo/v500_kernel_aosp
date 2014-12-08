@@ -156,9 +156,6 @@ extern void swsusp_free(void);
 extern int swsusp_read(unsigned int *flags_p);
 extern int swsusp_write(unsigned int flags);
 extern void swsusp_close(fmode_t);
-#ifdef CONFIG_SUSPEND
-extern int swsusp_unmark(void);
-#endif
 
 /* kernel/power/block_io.c */
 extern struct block_device *hib_resume_bdev;
@@ -196,13 +193,8 @@ static inline int suspend_devices_and_enter(suspend_state_t state)
 extern void suspend_test_start(void);
 extern void suspend_test_finish(const char *label);
 #else /* !CONFIG_PM_TEST_SUSPEND */
-#ifdef CONFIG_LGE_SUSPEND_AUTOTEST
-extern void suspend_test_start(void);
-extern void suspend_test_finish(const char *label);
-#else
 static inline void suspend_test_start(void) {}
 static inline void suspend_test_finish(const char *label) {}
-#endif
 #endif /* !CONFIG_PM_TEST_SUSPEND */
 
 #ifdef CONFIG_PM_SLEEP

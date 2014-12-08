@@ -705,13 +705,10 @@ static void msm_mctl_release(struct msm_cam_media_controller *p_mctl)
 			core, ioctl, VIDIOC_MSM_ISPIF_REL, NULL);
 #endif
 //End  LGE_BSP_CAMERA : qcom-daemon - jonghwan.ko@lge.com
-	pm_qos_update_request(&p_mctl->pm_qos_req_list,
-				PM_QOS_DEFAULT_VALUE);
-	pm_qos_remove_request(&p_mctl->pm_qos_req_list);
+		pm_qos_update_request(&p_mctl->pm_qos_req_list,
+					PM_QOS_DEFAULT_VALUE);
+		pm_qos_remove_request(&p_mctl->pm_qos_req_list);
 
-/* LGE_CHANGE_S, fixed kernel crash issue, 2013.04.11, youngil.yun[Start] */
-	if(&(p_mctl->wake_lock.link) != NULL)
-/* LGE_CHANGE_E, fixed kernel crash issue, 2013.04.11, youngil.yun[End] */
 		wake_unlock(&p_mctl->wake_lock);
 }
 
