@@ -2902,7 +2902,7 @@ static void __pm8921_charger_vbus_draw(unsigned int mA)
 
 #ifdef CONFIG_FORCE_FAST_CHARGE
 		if (force_fast_charge == 1)
-			i = 14;
+			i = 15;
 		else if (force_fast_charge == 2) {
 			switch (fast_charge_level) {
 				case FAST_CHARGE_500:
@@ -2912,7 +2912,7 @@ static void __pm8921_charger_vbus_draw(unsigned int mA)
 					i = 4;
 					break;
 				case FAST_CHARGE_900:
-					i = 8;
+					i = 7;
 					break;
 				case FAST_CHARGE_1100:
 					i = 10;
@@ -2920,8 +2920,8 @@ static void __pm8921_charger_vbus_draw(unsigned int mA)
 				case FAST_CHARGE_1300:
 					i = 12;
 					break;
-				case FAST_CHARGE_1500:
-					i = 14;
+				case FAST_CHARGE_1600:
+					i = 15;
 					break;
 				default:
 					break;
