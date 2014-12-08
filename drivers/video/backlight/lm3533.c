@@ -29,7 +29,9 @@
 #include <mach/board.h>
 #include <linux/mutex.h>
 #include <mach/board_lge.h>
-#include <linux/earlysuspend.h>
+#ifdef CONFIG_POWERSUSPEND
+#include <linux/powersuspend.h>
+#endif
 
 #define MAX_BRIGHTNESS_lm3533			0xFF
 #define MAX_BRIGHTNESS_lm3528			0x7F
@@ -82,19 +84,20 @@ static int saved_main_lcd_level = DEFAULT_BRIGHTNESS;
 
 static int backlight_status = BL_ON;
 static struct lm3533_device *main_lm3533_dev;
+#ifdef CONFIG_POWERSUSPEND
+static struct power_suspend early_suspend;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-static struct early_suspend early_suspend;
 #if defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) || \
 	defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL)
 static int is_early_suspended = false;
 static int requested_in_early_suspend_lcd_level= 0;
 #endif
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+
+#endif /* CONFIG_POWERSUSPEND */
 
 #if !defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) && \
 	!defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL)
-static struct early_suspend * h;
+static struct power_suspend * h;
 #endif
 
 static void lm3533_hw_reset(void)
@@ -169,7 +172,7 @@ static void lm3533_set_main_current_level(struct i2c_client *client, int level)
 void lm3533_backlight_on(int level)
 {
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && \
+#if defined(CONFIG_POWERSUSPEND) && \
 	(defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) || \
 	defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL))
 
@@ -177,7 +180,7 @@ void lm3533_backlight_on(int level)
 		requested_in_early_suspend_lcd_level = level;
 		return;
 	}
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 	mutex_lock(&backlight_mtx);
 	if (backlight_status == BL_OFF) {
 		pr_info("%s, ++lm3533_backlight_on\n", __func__);
@@ -210,10 +213,10 @@ void lm3533_backlight_on(int level)
 
 #if defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) || \
     defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL) || \
-    !defined(CONFIG_HAS_EARLYSUSPEND)
+	!defined(CONFIG_POWERSUSPEND)
 void lm3533_backlight_off(void)
 #else
-void lm3533_backlight_off(struct early_suspend * h)
+void lm3533_backlight_off(struct power_suspend * h)
 #endif
 {
 	int gpio = main_lm3533_dev->gpio;
@@ -245,7 +248,7 @@ void lm3533_lcd_backlight_set_level(int level)
 		if (level == 0) {
 #if defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) || \
     defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL) || \
-    !defined(CONFIG_HAS_EARLYSUSPEND)
+	!defined(CONFIG_POWERSUSPEND)
 			lm3533_backlight_off();
 #else
 			lm3533_backlight_off(h);
@@ -259,10 +262,11 @@ void lm3533_lcd_backlight_set_level(int level)
 }
 EXPORT_SYMBOL(lm3533_lcd_backlight_set_level);
 
-#if defined(CONFIG_HAS_EARLYSUSPEND) && \
+#if defined(CONFIG_POWERSUSPEND) && \
 	(defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) || \
 	defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL))
-void lm3533_early_suspend(struct early_suspend * h)
+
+void lm3533_early_suspend(struct power_suspend * h)
 {
 	pr_info("%s[Start] backlight_status: %d\n", __func__,
 			backlight_status);
@@ -273,7 +277,7 @@ void lm3533_early_suspend(struct early_suspend * h)
 	is_early_suspended = true;
 }
 
-void lm3533_late_resume(struct early_suspend * h)
+void lm3533_late_resume(struct power_suspend * h)
 {
 	is_early_suspended = false;
 
@@ -285,7 +289,7 @@ void lm3533_late_resume(struct early_suspend * h)
 	lm3533_lcd_backlight_set_level(requested_in_early_suspend_lcd_level);
 	return;
 }
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#endif /* CONFIG_POWERSUSPEND */
 
 static int bl_set_intensity(struct backlight_device *bd)
 {
@@ -350,7 +354,7 @@ static int lm3533_bl_suspend(struct i2c_client *client, pm_message_t state)
 
 #if defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) || \
     defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL) || \
-    !defined(CONFIG_HAS_EARLYSUSPEND)
+	!defined(CONFIG_POWERSUSPEND)
     lm3533_lcd_backlight_set_level(saved_main_lcd_level);
 #else
 	lm3533_backlight_off(h);
@@ -489,7 +493,7 @@ static int lm3533_probe(struct i2c_client *i2c_dev,
 	err = device_create_file(&i2c_dev->dev,
 			&dev_attr_lm3533_exp_min_value);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_POWERSUSPEND
 #if defined(CONFIG_FB_MSM_MIPI_LGIT_CMD_WVGA_INVERSE_PT_PANEL) || \
     defined(CONFIG_FB_MSM_MIPI_LGIT_VIDEO_WVGA_INVERSE_PT_PANEL)
 	early_suspend.suspend = lm3533_early_suspend;
@@ -497,8 +501,8 @@ static int lm3533_probe(struct i2c_client *i2c_dev,
 #else
 	early_suspend.suspend = lm3533_backlight_off;
 #endif
-	register_early_suspend(&early_suspend);
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+	register_power_suspend(&early_suspend);
+#endif /* CONFIG_POWERSUSPEND */
 	return 0;
 }
 

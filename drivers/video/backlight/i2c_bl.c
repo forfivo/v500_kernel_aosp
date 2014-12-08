@@ -28,8 +28,8 @@
 #include <linux/workqueue.h>
 
 #include <mach/board_lge.h>
-#if defined(CONFIG_HAS_EARLYSUSPEND)
-#include <linux/earlysuspend.h>
+#if defined(CONFIG_POWERSUSPEND)
+#include <linux/powersuspend.h>
 #endif
 
 #define I2C_BL_NAME                              "i2c_bl"
@@ -51,10 +51,10 @@ struct i2c_bl_device {
 	int factory_brightness;
 	struct mutex bl_mutex;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	struct early_suspend early_suspend;
+#ifdef CONFIG_POWERSUSPEND
+	struct power_suspend power_suspend;
 	int is_early_suspended;
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#endif /* CONFIG_HAS_POWERSUSPEND */
 
 	int store_level_used;
 	int delay_for_shaking;
@@ -349,10 +349,10 @@ void i2c_bl_backlight_on(struct i2c_client *client, int level)
 	struct i2c_bl_device *i2c_bl_dev = (struct i2c_bl_device *)i2c_get_clientdata(client);
 	struct i2c_bl_platform_data *pdata = (struct i2c_bl_platform_data *)client->dev.platform_data;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
+#ifdef CONFIG_HAS_POWERSUSPEND
 	if (i2c_bl_dev->is_early_suspended)
               return;
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#endif /* CONFIG_HAS_POWERSUSPEND */
 	if (i2c_bl_dev->backlight_status == BL_OFF) {
 		i2c_bl_hw_reset(client);
 		mutex_lock(&i2c_bl_dev->bl_mutex);
@@ -406,10 +406,10 @@ static void i2c_bl_lcd_backlight_set_level(struct i2c_client *client, int level)
 	}
 }
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-void i2c_bl_early_suspend(struct early_suspend * h)
+#ifdef CONFIG_HAS_POWERSUSPEND
+void i2c_bl_early_suspend(struct power_suspend * h)
 {
-	struct i2c_bl_device *i2c_bl_dev = container_of(h, struct i2c_bl_device, early_suspend);
+	struct i2c_bl_device *i2c_bl_dev = container_of(h, struct i2c_bl_device, power_suspend);
 
 	pr_info("%s[Start] backlight_status: %d\n", __func__, i2c_bl_dev->backlight_status);
 	if (i2c_bl_dev->backlight_status == BL_OFF)
@@ -420,9 +420,9 @@ void i2c_bl_early_suspend(struct early_suspend * h)
 	return;
 }
 
-void i2c_bl_late_resume(struct early_suspend * h)
+void i2c_bl_late_resume(struct power_suspend * h)
 {
-	struct i2c_bl_device *i2c_bl_dev = container_of(h, struct i2c_bl_device, early_suspend);
+	struct i2c_bl_device *i2c_bl_dev = container_of(h, struct i2c_bl_device, power_suspend);
 
 	pr_info("%s[Start] backlight_status: %d\n", __func__, i2c_bl_dev->backlight_status);
 	if (i2c_bl_dev->backlight_status == BL_ON)
@@ -441,7 +441,7 @@ void i2c_bl_late_resume(struct early_suspend * h)
 
 	return;
 }
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#endif /* CONFIG_HAS_POWERSUSPEND */
 
 static int bl_set_intensity(struct backlight_device *bd)
 {
@@ -513,17 +513,17 @@ static int i2c_bl_resume(struct i2c_client *client)
 
 static int i2c_bl_suspend(struct i2c_client *client, pm_message_t state)
 {
-#if !defined(CONFIG_HAS_EARLYSUSPEND)
+#if !defined(CONFIG_HAS_POWERSUSPEND)
 	struct i2c_bl_device *i2c_bl_dev = (struct i2c_bl_device *)i2c_get_clientdata(client);
 #endif
 
 	pr_debug("[LCD][DEBUG] %s: new state: %d\n", __func__, state.event);
 
-#if !defined(CONFIG_HAS_EARLYSUSPEND)
+#if !defined(CONFIG_HAS_POWERSUSPEND)
 	i2c_bl_lcd_backlight_set_level(client, i2c_bl_dev->saved_main_lcd_level);
 #else
 	i2c_bl_backlight_off(client);
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#endif /* CONFIG_HAS_POWERSUSPEND */
 	return 0;
 }
 
@@ -762,12 +762,12 @@ static int i2c_bl_probe(struct i2c_client *i2c_dev, const struct i2c_device_id *
 	err = device_create_file(&i2c_dev->dev, &dev_attr_i2c_bl_shaking_delay);
 	err = device_create_file(&i2c_dev->dev, &dev_attr_i2c_bl_dump_reg);
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	i2c_bl_dev->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
-	i2c_bl_dev->early_suspend.suspend = i2c_bl_early_suspend;
-	i2c_bl_dev->early_suspend.resume = i2c_bl_late_resume;
-	register_early_suspend(&i2c_bl_dev->early_suspend);
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#ifdef CONFIG_HAS_POWERSUSPEND
+	//i2c_bl_dev->early_suspend.level = EARLY_SUSPEND_LEVEL_BLANK_SCREEN;
+	i2c_bl_dev->power_suspend.suspend = i2c_bl_early_suspend;
+	i2c_bl_dev->power_suspend.resume = i2c_bl_late_resume;
+	register_power_suspend(&i2c_bl_dev->power_suspend);
+#endif /* CONFIG_HAS_POWERSUSPEND */
 	return 0;
 }
 
@@ -784,9 +784,9 @@ static int i2c_bl_remove(struct i2c_client *client)
 
 	gpio = i2c_bl_dev->gpio;
 
-#ifdef CONFIG_HAS_EARLYSUSPEND
-	unregister_early_suspend(&i2c_bl_dev->early_suspend);
-#endif /* CONFIG_HAS_EARLYSUSPEND */
+#ifdef CONFIG_HAS_POWERSUSPEND
+	unregister_power_suspend(&i2c_bl_dev->power_suspend);
+#endif /* CONFIG_HAS_POWERSUSPEND */
 
 	backlight_device_unregister(i2c_bl_dev->bl_dev);
 	i2c_set_clientdata(client, NULL);
