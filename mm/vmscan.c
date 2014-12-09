@@ -2666,7 +2666,7 @@ loop_again:
 			}
 
 		}
-		
+
 		if (!unbalanced_zone || (order && pgdat_balanced(pgdat, balanced, *classzone_idx)))
 			break;		/* kswapd: all done */
 		/*

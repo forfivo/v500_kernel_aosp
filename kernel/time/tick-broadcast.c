@@ -19,7 +19,6 @@
 #include <linux/profile.h>
 #include <linux/sched.h>
 #include <linux/smp.h>
-#include <linux/gfp.h>
 #include <linux/module.h>
 
 #include "tick-internal.h"
