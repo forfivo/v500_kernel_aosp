@@ -464,7 +464,7 @@ struct mxt_data *test_data = NULL;
 //#define CUST_G2_TOUCH_WAKEUP_GESTURE
 #ifdef CONFIG_TOUCHSCREEN_ATMEL_KNOCK_ON
 //static int touch_gesture_enable = 1;
-static struct wakeup_source touch_wake_lock;
+static struct wake_lock touch_wake_lock;
 static struct mutex i2c_suspend_lock;
 //static void touch_double_tap_wakeup_enable(struct lge_touch_data *ts);
 static bool suspended_due_to_smart_cover = false;

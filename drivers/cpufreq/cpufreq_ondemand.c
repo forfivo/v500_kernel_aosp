@@ -27,6 +27,7 @@
 #include <linux/workqueue.h>
 #include <linux/slab.h>
 #include <linux/touchboost.h>
+#include <linux/sched/rt.h>
 
 /*
  * dbs is used in this file as a shortform for demandbased switching

@@ -146,35 +146,35 @@ void __ptrace_unlink(struct task_struct *child)
 /* Ensure that nothing can wake it up, even SIGKILL */
 static bool ptrace_freeze_traced(struct task_struct *task)
 {
-  bool ret = false;
+	bool ret = false;
 
-  /* Lockless, nobody but us can set this flag */
-  if (task->jobctl & JOBCTL_LISTENING)
-    return ret;
+	/* Lockless, nobody but us can set this flag */
+	if (task->jobctl & JOBCTL_LISTENING)
+		return ret;
 
-  spin_lock_irq(&task->sighand->siglock);
-  if (task_is_traced(task) && !__fatal_signal_pending(task)) {
-    task->state = __TASK_TRACED;
-    ret = true;
-  }
-  spin_unlock_irq(&task->sighand->siglock);
+	spin_lock_irq(&task->sighand->siglock);
+	if (task_is_traced(task) && !__fatal_signal_pending(task)) {
+		task->state = __TASK_TRACED;
+		ret = true;
+	}
+	spin_unlock_irq(&task->sighand->siglock);
 
-  return ret;
+	return ret;
 }
 
 static void ptrace_unfreeze_traced(struct task_struct *task)
 {
-  if (task->state != __TASK_TRACED)
-    return;
+	if (task->state != __TASK_TRACED)
+		return;
 
-  WARN_ON(!task->ptrace || task->parent != current);
+	WARN_ON(!task->ptrace || task->parent != current);
 
-  spin_lock_irq(&task->sighand->siglock);
-  if (__fatal_signal_pending(task))
-    wake_up_state(task, __TASK_TRACED);
-  else
-    task->state = TASK_TRACED;
-  spin_unlock_irq(&task->sighand->siglock);
+	spin_lock_irq(&task->sighand->siglock);
+	if (__fatal_signal_pending(task))
+		wake_up_state(task, __TASK_TRACED);
+	else
+		task->state = TASK_TRACED;
+	spin_unlock_irq(&task->sighand->siglock);
 }
 
 /**
@@ -219,13 +219,13 @@ int ptrace_check_attach(struct task_struct *child, bool ignore_state)
 
 	if (!ret && !ignore_state) {
 		if (!wait_task_inactive(child, __TASK_TRACED)) {
-		/*
-		 * This can only happen if may_ptrace_stop() fails and
-		 * ptrace_stop() changes ->state back to TASK_RUNNING,
-		 * so we should not worry about leaking __TASK_TRACED.
-		 */
-		WARN_ON(child->state == __TASK_TRACED);
-		ret = -ESRCH;
+			/*
+			 * This can only happen if may_ptrace_stop() fails and
+			 * ptrace_stop() changes ->state back to TASK_RUNNING,
+			 * so we should not worry about leaking __TASK_TRACED.
+			 */
+			WARN_ON(child->state == __TASK_TRACED);
+			ret = -ESRCH;
 		}
 	}
 
@@ -1118,7 +1118,6 @@ asmlinkage long compat_sys_ptrace(compat_long_t request, compat_long_t pid,
 		if (ret || request != PTRACE_DETACH)
 			ptrace_unfreeze_traced(child);
 	}
-
 
  out_put_task_struct:
 	put_task_struct(child);

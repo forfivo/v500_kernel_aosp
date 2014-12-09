@@ -376,7 +376,7 @@ config DYNAMIC_FTRACE
 	depends on HAVE_DYNAMIC_FTRACE
 	default y
 	help
-          This option will modify all the calls to function tracing
+	  This option will modify all the calls to function tracing
 	  dynamically (will patch them out of the binary image and
 	  replace them with a No-Op instruction) on boot up. During
 	  compile time, a table is made of all the locations that ftrace
