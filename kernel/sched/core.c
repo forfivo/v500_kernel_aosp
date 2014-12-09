@@ -1219,8 +1219,10 @@ compute_demand:
 		if (p->sched_class == &fair_sched_class)
 			inc_nr_big_small_task(rq, p);
 	}
+#ifdef TRACE_CRAP
 	trace_sched_update_history(rq, p, runtime, samples, update_sum,
 				   new_window, event);
+#endif
 }
 
 static int __init set_sched_ravg_window(char *str)
@@ -1287,7 +1289,7 @@ static void update_task_ravg(struct task_struct *p, struct rq *rq,
 	u64 mark_start = p->ravg.mark_start;
 	u64 window_start;
 
-	if (sched_use_pelt || !rq->window_start)
+	if (is_idle_task(p) || sched_use_pelt || !rq->window_start)
 		return;
 
 	lockdep_assert_held(&rq->lock);
@@ -1362,7 +1364,9 @@ static void update_task_ravg(struct task_struct *p, struct rq *rq,
 	if (event == PICK_NEXT_TASK && !p->ravg.sum)
 		rq->curr_runnable_sum += p->ravg.partial_demand;
 
+#ifdef TRACE_CRAP
 	trace_sched_update_task_ravg(p, rq, event, wallclock);
+#endif
 
 	p->ravg.mark_start = wallclock;
 }
@@ -1782,8 +1786,10 @@ static void fixup_busy_time(struct task_struct *p, int new_cpu)
 	BUG_ON((int)src_rq->prev_runnable_sum < 0);
 	BUG_ON((int)src_rq->curr_runnable_sum < 0);
 
+#ifdef TRACE_CRAP
 	trace_sched_migration_update_sum(src_rq);
 	trace_sched_migration_update_sum(dest_rq);
+#endif
 
 	if (p->state == TASK_WAKING)
 		double_rq_unlock(src_rq, dest_rq);
@@ -1863,6 +1869,7 @@ void set_task_cpu(struct task_struct *p, unsigned int new_cpu)
 #ifdef TRACE_CRAP
 	trace_sched_migrate_task(p, new_cpu, pct_task_load(p));
 #endif
+
 	if (task_cpu(p) != new_cpu) {
 		struct task_migration_notifier tmn;
 
@@ -2368,12 +2375,12 @@ try_to_wake_up(struct task_struct *p, unsigned int state, int wake_flags)
 {
 	unsigned long flags;
 	int cpu, src_cpu, success = 0;
+	bool notify = false;
 #ifdef CONFIG_SMP
 	struct rq *rq;
 	int long_sleep = 0;
 	u64 wallclock;
 #endif
-	bool notify = false;
 
 	/*
 	 * If we are going to wake up a thread waiting for CONDITION we
@@ -4649,7 +4656,7 @@ void rt_mutex_setprio(struct task_struct *p, int prio)
 
 #ifdef TRACE_CRAP
 	trace_sched_pi_setprio(p, prio);
-#endif	
+#endif
 	oldprio = p->prio;
 	prev_class = p->sched_class;
 	on_rq = p->on_rq;
@@ -7732,179 +7739,6 @@ static struct sched_domain_topology_level *sched_domain_topology = default_topol
 #define for_each_sd_topology(tl)			\
 	for (tl = sched_domain_topology; tl->init; tl++)
 
-#ifdef CONFIG_NUMA
-
-static int sched_domains_numa_levels;
-static int sched_domains_numa_scale;
-static int *sched_domains_numa_distance;
-static struct cpumask ***sched_domains_numa_masks;
-static int sched_domains_curr_level;
-
-static inline int sd_local_flags(int level)
-{
-	if (sched_domains_numa_distance[level] > REMOTE_DISTANCE)
-		return 0;
-
-	return SD_BALANCE_EXEC | SD_BALANCE_FORK | SD_WAKE_AFFINE;
-}
-
-static struct sched_domain *
-sd_numa_init(struct sched_domain_topology_level *tl, int cpu)
-{
-	struct sched_domain *sd = *per_cpu_ptr(tl->data.sd, cpu);
-	int level = tl->numa_level;
-	int sd_weight = cpumask_weight(
-			sched_domains_numa_masks[level][cpu_to_node(cpu)]);
-
-	*sd = (struct sched_domain){
-		.min_interval		= sd_weight,
-		.max_interval		= 2*sd_weight,
-		.busy_factor		= 32,
-		.imbalance_pct		= 125,
-		.cache_nice_tries	= 2,
-		.busy_idx		= 3,
-		.idle_idx		= 2,
-		.newidle_idx		= 0,
-		.wake_idx		= 0,
-		.forkexec_idx		= 0,
-
-		.flags			= 1*SD_LOAD_BALANCE
-					| 1*SD_BALANCE_NEWIDLE
-					| 0*SD_BALANCE_EXEC
-					| 0*SD_BALANCE_FORK
-					| 0*SD_BALANCE_WAKE
-					| 0*SD_WAKE_AFFINE
-					| 0*SD_PREFER_LOCAL
-					| 0*SD_SHARE_CPUPOWER
-					| 0*SD_SHARE_PKG_RESOURCES
-					| 1*SD_SERIALIZE
-					| 0*SD_PREFER_SIBLING
-					| sd_local_flags(level)
-					,
-		.last_balance		= jiffies,
-		.balance_interval	= sd_weight,
-	};
-	SD_INIT_NAME(sd, NUMA);
-	sd->private = &tl->data;
-
-	/*
-	 * Ugly hack to pass state to sd_numa_mask()...
-	 */
-	sched_domains_curr_level = tl->numa_level;
-
-	return sd;
-}
-
-static const struct cpumask *sd_numa_mask(int cpu)
-{
-	return sched_domains_numa_masks[sched_domains_curr_level][cpu_to_node(cpu)];
-}
-
-static void sched_init_numa(void)
-{
-	int next_distance, curr_distance = node_distance(0, 0);
-	struct sched_domain_topology_level *tl;
-	int level = 0;
-	int i, j, k;
-
-	sched_domains_numa_scale = curr_distance;
-	sched_domains_numa_distance = kzalloc(sizeof(int) * nr_node_ids, GFP_KERNEL);
-	if (!sched_domains_numa_distance)
-		return;
-
-	/*
-	 * O(nr_nodes^2) deduplicating selection sort -- in order to find the
-	 * unique distances in the node_distance() table.
-	 *
-	 * Assumes node_distance(0,j) includes all distances in
-	 * node_distance(i,j) in order to avoid cubic time.
-	 *
-	 * XXX: could be optimized to O(n log n) by using sort()
-	 */
-	next_distance = curr_distance;
-	for (i = 0; i < nr_node_ids; i++) {
-		for (j = 0; j < nr_node_ids; j++) {
-			int distance = node_distance(0, j);
-			if (distance > curr_distance &&
-					(distance < next_distance ||
-					 next_distance == curr_distance))
-				next_distance = distance;
-		}
-		if (next_distance != curr_distance) {
-			sched_domains_numa_distance[level++] = next_distance;
-			sched_domains_numa_levels = level;
-			curr_distance = next_distance;
-		} else break;
-	}
-	/*
-	 * 'level' contains the number of unique distances, excluding the
-	 * identity distance node_distance(i,i).
-	 *
-	 * The sched_domains_nume_distance[] array includes the actual distance
-	 * numbers.
-	 */
-
-	sched_domains_numa_masks = kzalloc(sizeof(void *) * level, GFP_KERNEL);
-	if (!sched_domains_numa_masks)
-		return;
-
-	/*
-	 * Now for each level, construct a mask per node which contains all
-	 * cpus of nodes that are that many hops away from us.
-	 */
-	for (i = 0; i < level; i++) {
-		sched_domains_numa_masks[i] =
-			kzalloc(nr_node_ids * sizeof(void *), GFP_KERNEL);
-		if (!sched_domains_numa_masks[i])
-			return;
-
-		for (j = 0; j < nr_node_ids; j++) {
-			struct cpumask *mask = kzalloc_node(cpumask_size(), GFP_KERNEL, j);
-			if (!mask)
-				return;
-
-			sched_domains_numa_masks[i][j] = mask;
-
-			for (k = 0; k < nr_node_ids; k++) {
-				if (node_distance(j, k) > sched_domains_numa_distance[i])
-					continue;
-
-				cpumask_or(mask, mask, cpumask_of_node(k));
-			}
-		}
-	}
-
-	tl = kzalloc((ARRAY_SIZE(default_topology) + level) *
-			sizeof(struct sched_domain_topology_level), GFP_KERNEL);
-	if (!tl)
-		return;
-
-	/*
-	 * Copy the default topology bits..
-	 */
-	for (i = 0; default_topology[i].init; i++)
-		tl[i] = default_topology[i];
-
-	/*
-	 * .. and append 'j' levels of NUMA goodness.
-	 */
-	for (j = 0; j < level; i++, j++) {
-		tl[i] = (struct sched_domain_topology_level){
-			.init = sd_numa_init,
-			.mask = sd_numa_mask,
-			.flags = SDTL_OVERLAP,
-			.numa_level = j,
-		};
-	}
-
-	sched_domain_topology = tl;
-}
-#else
-static inline void sched_init_numa(void)
-{
-}
-#endif /* CONFIG_NUMA */
-
 static int __sdt_alloc(const struct cpumask *cpu_map)
 {
 	struct sched_domain_topology_level *tl;
@@ -8269,7 +8103,7 @@ match2:
 	mutex_unlock(&sched_domains_mutex);
 }
 
-static int num_cpus_frozen;    /* used to mark begin/end of suspend/resume */
+static int num_cpus_frozen;	/* used to mark begin/end of suspend/resume */
 
 /*
  * Update cpusets according to cpu_active mask.  If cpusets are
@@ -8303,6 +8137,7 @@ static int cpuset_cpu_active(struct notifier_block *nfb, unsigned long action,
 		 * restore the original sched domains by considering the
 		 * cpuset configurations.
 		 */
+
 	case CPU_ONLINE:
 	case CPU_DOWN_FAILED:
 		cpuset_update_active_cpus();
@@ -8532,10 +8367,10 @@ void __init sched_init(void)
 		rq->online = 0;
 		rq->idle_stamp = 0;
 		rq->avg_idle = 2*sysctl_sched_migration_cost;
+		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
 		rq->cstate = 0;
 		rq->wakeup_latency = 0;
 		rq->wakeup_energy = 0;
-		rq->max_idle_balance_cost = sysctl_sched_migration_cost;
 #if defined(CONFIG_SCHED_FREQ_INPUT) || defined(CONFIG_SCHED_HMP)
 		rq->cur_freq = 1;
 		rq->max_freq = 1;

@@ -2486,7 +2486,9 @@ place_entity(struct cfs_rq *cfs_rq, struct sched_entity *se, int initial)
 	}
 
 	/* ensure we never gain time by being placed backwards. */
-	se->vruntime = max_vruntime(se->vruntime, vruntime);
+	vruntime = max_vruntime(se->vruntime, vruntime);
+
+	se->vruntime = vruntime;
 }
 
 static void check_enqueue_throttle(struct cfs_rq *cfs_rq);
@@ -3523,15 +3525,14 @@ static void __maybe_unused unthrottle_offline_cfs_rqs(struct rq *rq)
 }
 
 #else /* CONFIG_CFS_BANDWIDTH */
-static bool check_cfs_rq_runtime(struct cfs_rq *cfs_rq) { return false; }
 static inline u64 cfs_rq_clock_task(struct cfs_rq *cfs_rq)
 {
 	return rq_of(cfs_rq)->clock_task;
 }
 
 static void account_cfs_rq_runtime(struct cfs_rq *cfs_rq,
-				     u64 delta_exec) {}
-static void check_cfs_rq_runtime(struct cfs_rq *cfs_rq) {}
+					u64 delta_exec) {}
+static bool check_cfs_rq_runtime(struct cfs_rq *cfs_rq) { return false; }
 static void check_enqueue_throttle(struct cfs_rq *cfs_rq) {}
 static __always_inline void return_cfs_rq_runtime(struct cfs_rq *cfs_rq) {}
 
@@ -5284,7 +5285,7 @@ static inline void update_sg_lb_stats(struct lb_env *env,
 			int local_group, int *balance, struct sg_lb_stats *sgs)
 {
 	unsigned long nr_running, max_nr_running, min_nr_running;
-	unsigned long scaled_load, load, max_cpu_load, min_cpu_load, max_nr_running;
+	unsigned long scaled_load, load, max_cpu_load, min_cpu_load;
 	int i;
 	unsigned int balance_cpu = -1;
 	unsigned long balance_load = ~0UL;
@@ -6186,6 +6187,10 @@ out_one_pinned:
 
 	ld_moved = 0;
 out:
+	trace_sched_load_balance(this_cpu, idle, *balance,
+				 group ? group->cpumask[0] : 0,
+				 busiest ? busiest->nr_running : 0, env.imbalance,
+				 env.flags, ld_moved, sd->balance_interval);
 	return ld_moved;
 }
 
@@ -6198,11 +6203,11 @@ void idle_balance(int this_cpu, struct rq *this_rq)
 	struct sched_domain *sd;
 	int pulled_task = 0;
 	unsigned long next_balance = jiffies + HZ;
+	u64 curr_cost = 0;
 	int i, cost;
 	int min_power = INT_MAX;
 	int balance_cpu = -1;
 	struct rq *balance_rq = NULL;
-	u64 curr_cost = 0;
 
 	this_rq->idle_stamp = rq_clock(this_rq);
 
@@ -6258,10 +6263,10 @@ void idle_balance(int this_cpu, struct rq *this_rq)
 
 			/* If we've pulled tasks over stop searching: */
 			pulled_task = load_balance(balance_cpu, balance_rq,
-						   sd,
-						   (this_cpu == balance_cpu ?
-						    CPU_NEWLY_IDLE :
-						    CPU_IDLE), &balance);
+						  sd,
+						  (this_cpu == balance_cpu ?
+						   CPU_NEWLY_IDLE :
+						   CPU_IDLE), &balance);
 
 			domain_cost = sched_clock_cpu(smp_processor_id()) - t0;
 
@@ -6406,7 +6411,7 @@ static struct {
 	unsigned long next_balance;     /* in jiffy units */
 } nohz ____cacheline_aligned;
 
-static inline int find_new_ilb(void)
+static inline int find_new_ilb(int cpu, int type)
 {
 	int ilb;
 
@@ -6426,13 +6431,13 @@ static inline int find_new_ilb(void)
  * nohz_load_balancer CPU (if there is one) otherwise fallback to any idle
  * CPU (if there is one).
  */
-static void nohz_balancer_kick(void)
+static void nohz_balancer_kick(int cpu, int type)
 {
 	int ilb_cpu;
 
 	nohz.next_balance++;
 
-	ilb_cpu = find_new_ilb();
+	ilb_cpu = find_new_ilb(cpu, type);
 
 	if (ilb_cpu >= nr_cpu_ids)
 		return;
