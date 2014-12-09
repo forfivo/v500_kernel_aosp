@@ -38,29 +38,39 @@
 #include <linux/rcupdate.h>
 #include <linux/notifier.h>
 #include <linux/swap.h>
+#include <linux/powersuspend.h>
 #include <linux/fs.h>
 #include <linux/mutex.h>
 #include <linux/delay.h>
 
 static uint32_t lowmem_debug_level = 1;
+static uint32_t lowmem_auto_oom = 1;
 static short lowmem_adj[6] = {
 	0,
 	1,
 	6,
 	12,
-	13,
-	15,
 };
-static int lowmem_adj_size = 6;
+static int lowmem_adj_size = 4;
 static int lowmem_minfree[6] = {
-	 3 *  512,	/* Foreground App: 	6 MB	*/
-	 2 * 1024,	/* Visible App: 	8 MB	*/
-	 4 * 1024,	/* Secondary Server: 	16 MB	*/
-	16 * 1024,	/* Hidden App: 		64 MB	*/
-	28 * 1024,	/* Content Provider: 	112 MB	*/
-	32 * 1024,	/* Empty App: 		128 MB	*/
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
 };
-static int lowmem_minfree_size = 6;
+static int lowmem_minfree_screen_off[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+};
+static int lowmem_minfree_screen_on[6] = {
+	3 * 512,	/* 6MB */
+	2 * 1024,	/* 8MB */
+	4 * 1024,	/* 16MB */
+	16 * 1024,	/* 64MB */
+};
+static int lowmem_minfree_size = 4;
 static int lmk_fast_run = 1;
 
 static unsigned long lowmem_deathpending_timeout;
@@ -483,9 +493,34 @@ static struct shrinker lowmem_shrinker = {
 	.seeks = 32
 };
 
+static void low_mem_power_suspend(struct power_suspend *handler)
+{
+	if (lowmem_auto_oom) {
+		mutex_lock(&auto_oom_mutex);
+		memcpy(lowmem_minfree_screen_on, lowmem_minfree, sizeof(lowmem_minfree));
+		memcpy(lowmem_minfree, lowmem_minfree_screen_off, sizeof(lowmem_minfree_screen_off));
+		mutex_unlock(&auto_oom_mutex);
+	}
+}
+
+static void low_mem_late_resume(struct power_suspend *handler)
+{
+	if (lowmem_auto_oom) {
+		mutex_lock(&auto_oom_mutex);
+		memcpy(lowmem_minfree, lowmem_minfree_screen_on, sizeof(lowmem_minfree_screen_on));
+		mutex_unlock(&auto_oom_mutex);
+	}
+}
+
+static struct power_suspend low_mem_suspend = {
+	.suspend = low_mem_power_suspend,
+	.resume = low_mem_late_resume,
+};
+
 static int __init lowmem_init(void)
 {
 	register_shrinker(&lowmem_shrinker);
+	register_power_suspend(&low_mem_suspend);
 	return 0;
 }
 
@@ -663,7 +698,10 @@ module_param_array_named(adj, lowmem_adj, short, &lowmem_adj_size,
 #endif
 module_param_array_named(minfree, lowmem_minfree, uint, &lowmem_minfree_size,
 			 S_IRUGO | S_IWUSR);
+module_param_array_named(minfree_screen_off, lowmem_minfree_screen_off, uint, &lowmem_minfree_size,
+			 S_IRUGO | S_IWUSR);
 module_param_named(debug_level, lowmem_debug_level, uint, S_IRUGO | S_IWUSR);
+module_param_named(auto_oom, lowmem_auto_oom, uint, S_IRUGO | S_IWUSR);
 module_param_named(lmk_fast_run, lmk_fast_run, int, S_IRUGO | S_IWUSR);
 
 module_init(lowmem_init);
