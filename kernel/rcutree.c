@@ -1336,7 +1336,6 @@ rcu_send_cbs_to_orphanage(int cpu, struct rcu_state *rsp,
 	 * because ->onofflock excludes _rcu_barrier()'s adoption of
 	 * the callbacks, thus no memory barrier is required.
 	 */
-
 	if (rdp->nxtlist != NULL) {
 		rsp->qlen_lazy += rdp->qlen_lazy;
 		rsp->qlen += rdp->qlen;
